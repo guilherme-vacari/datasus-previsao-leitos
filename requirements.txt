@@ -2,3 +2,9 @@ pysus
 pandas
 pyarrow
 duckdb
+ipykernel
+nest_asyncio
+argparse
+pathlib
+pyreaddbc
+dbfread
