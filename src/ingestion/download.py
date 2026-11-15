@@ -1,9 +1,10 @@
 import argparse
-from pathlib import Path
-import pysus
 from ftplib import FTP
+from pathlib import Path
+
 import pandas as pd
 import pyreaddbc
+import pysus
 from dbfread import DBF
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -32,12 +33,14 @@ colunas = [
     "COD_IDADE",
     "SEXO",
     "MORTE",
-    "VAL_TOT"
+    "VAL_TOT",
 ]
+
 
 def caminho_saida(uf, ano, mes):
 
-    return RAW_DIR/ f"sih_rd_{uf}_{ano}{mes:02d}.parquet"
+    return RAW_DIR / f"sih_rd_{uf}_{ano}{mes:02d}.parquet"
+
 
 def buscar_via_ftp(uf, ano, mes):
     nome = f"RD{uf}{ano % 100:02d}{mes:02d}"
@@ -53,7 +56,7 @@ def buscar_via_ftp(uf, ano, mes):
             with open(dbc, "wb") as arquivo:
                 ftp.retrbinary(f"RETR {nome}.dbc", arquivo.write)
     except Exception:
-        dbc.unlink(missing_ok=True)   # não deixa um arquivo pela metade
+        dbc.unlink(missing_ok=True)  # não deixa um arquivo pela metade
         raise
 
     pyreaddbc.dbc2dbf(str(dbc), str(dbf))
@@ -73,6 +76,7 @@ def buscar_via_ftp(uf, ano, mes):
     dbf.unlink()
     return df
 
+
 def buscar_mes(uf, ano, mes):
     df = pysus.sih(uf, ano, mes, group="RD", as_dataframe=True)
 
@@ -81,6 +85,7 @@ def buscar_mes(uf, ano, mes):
         df = buscar_via_ftp(uf, ano, mes)
 
     return df
+
 
 def baixar_sih(uf, ano, mes):
 
@@ -101,20 +106,21 @@ def baixar_sih(uf, ano, mes):
     df.to_parquet(saida, index=False)
     print(f"Salvo: {saida} ({len(df)} linhas)")
 
+
 def baixar_periodos(uf, ano_inicio, ano_fim):
     falhas = []
 
     for ano in range(ano_inicio, ano_fim + 1):
-        for mes in range (1, 13):
+        for mes in range(1, 13):
             try:
                 baixar_sih(uf, ano, mes)
-            except Exception as erro:
-                print(f'Falhou {ano}-{mes:02d}: {erro}')
+            except Exception as erro:  # noqa: BLE001 - seguir para o próximo mês
+                print(f"Falhou {ano}-{mes:02d}: {erro}")
                 falhas.append((ano, mes))
 
-    print(f'Concluído. Meses com falha: {len(falhas)}')
+    print(f"Concluído. Meses com falha: {len(falhas)}")
     for ano, mes in falhas:
-        print(f' - {ano}-{mes:02d}')
+        print(f" - {ano}-{mes:02d}")
 
 
 def main():
@@ -133,6 +139,7 @@ def main():
         baixar_sih(uf, args.ano, args.mes)
     else:
         parser.error("Informe --mes (um mês) ou --ano_fim (um período).")
+
 
 if __name__ == "__main__":
     main()
