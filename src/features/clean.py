@@ -21,3 +21,20 @@ def filtrar_janela(df: pd.DataFrame, inicio: pd.Timestamp = JANELA_INICIO) -> pd
     filtrado = df[df["DT_INTER"] >= inicio]
     return filtrado.copy()
 
+def agregar_mensal(df: pd.DataFrame) -> pd.DataFrame:
+    """"Conta internações e soma dias-leito por mês de DT_INTER"""
+    return (
+        df.assign(mes=df["DT_INTER"].dt.to_period("M").dt.to_timestamp())
+        .groupby("mes", as_index=False)
+        .agg(
+            internacoes=("N_AIH", "size"), 
+            dias_leito=("DIAS_PERM", "sum"),
+        )
+    )
+
+def descartar_meses_incompletos(serie: pd.DataFrame, n: int = MESES_DESCARTADOS) -> pd.DataFrame:
+    """"Remove os n últimos meses da série, que ainda estão incompletos."""
+    if n < 0:
+        raise ValueError("n não pode ser negativo")
+    ordenada = serie.sort_values("mes")
+    return ordenada.iloc[: len(ordenada) - n].reset_index(drop=True)
