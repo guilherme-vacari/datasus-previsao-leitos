@@ -1,4 +1,11 @@
+import argparse
+from pathlib import Path
+
 import pandas as pd
+
+RAIZ = Path(__file__).resolve().parents[2]
+RAW_DIR = RAIZ / "data" / "raw"
+PROCESSED_DIR = RAIZ / "data" / "processed"
 
 COLUNAS_NUMERICAS = ["DIAS_PERM", "QT_DIARIAS", "IDADE", "MORTE", "VAL_TOT"]
 COLUNAS_DATA = ["DT_INTER", "DT_SAIDA"]
@@ -38,3 +45,38 @@ def descartar_meses_incompletos(serie: pd.DataFrame, n: int = MESES_DESCARTADOS)
         raise ValueError("n não pode ser negativo")
     ordenada = serie.sort_values("mes")
     return ordenada.iloc[: len(ordenada) - n].reset_index(drop=True)
+
+def limpar_arquivo(caminho: Path) -> pd.DataFrame:
+    """Lê um Parquet da camada raw e devolve a agregação mensal dele."""
+    df = pd.read_parquet(caminho)
+    df = converter_tipos(df)
+    df = filtrar_janela(df)
+    return agregar_mensal(df)
+
+def construir_serie(
+    uf: str = "PR",
+    raw_dir: Path = RAW_DIR,
+    n_descartar: int = MESES_DESCARTADOS,
+) -> pd.DataFrame:
+    """Constrói a série mensal de internações e dias-leito de uma UF."""
+    arquivos = sorted(Path(raw_dir).glob(f"sih_rd_{uf}_*.parquet"))
+    if not arquivos:
+        raise FileNotFoundError(f"Nenhum arquivo sih_rd_{uf}_*.parquet em {raw_dir}")
+    parciais = [limpar_arquivo(arquivo) for arquivo in arquivos]
+    total = pd.concat(parciais, ignore_index=True).groupby("mes", as_index=False).sum()
+    return descartar_meses_incompletos(total, n_descartar)
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Constrói a série mensal limpa.")
+    parser.add_argument("--uf", default="PR")
+    args = parser.parse_args()
+    serie = construir_serie(args.uf)
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    saida = PROCESSED_DIR / f"serie_mensal_{args.uf}.parquet"
+    serie.to_parquet(saida, index=False)
+    print(f"Salvo: {saida} ({len(serie)} meses)")
+
+
+if __name__ == "__main__":
+    main()
+
