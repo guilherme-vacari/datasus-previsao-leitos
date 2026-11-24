@@ -7,3 +7,5 @@
 # DT_INTER anterior a 2019-01: ~59 mil linhas, 25 meses distintos. Internações de longa permanência faturadas depois. Filtradas na limpeza para manter a série coerente com a janela 2019-2024.
 
 # Competência coincide com o mês da alta em só 55% das linhas; o restante é faturado depois. A censura à direita afeta os últimos meses da série. Agregação por DT_INTER; descartar os últimos 3 últimos meses conforme a distribuição de defasagem.
+
+# Validação da série com Pandera no main (não dentro de construir_serie): barra dado ruim na saída do pipeline sem exigir séries completas nos testes unitários. Regras: mês único e no dia 1, sem buracos, valores positivos, sem colunas extras.
